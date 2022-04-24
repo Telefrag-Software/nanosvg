@@ -1,0 +1,66 @@
+cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+
+project(nanosvg VERSION 1.0.0 LANGUAGES C)
+
+set(SOURCE_DIRECTORY "src")
+
+set(SOURCE_FILES
+	"nanosvg.h"
+	"nanosvgrast.h"
+)
+
+list(TRANSFORM SOURCE_FILES PREPEND "${SOURCE_DIRECTORY}/")
+
+add_library(${PROJECT_NAME} INTERFACE ${SOURCE_FILES})
+
+target_include_directories(${PROJECT_NAME}
+    INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/${SOURCE_DIRECTORY}>
+        $<INSTALL_INTERFACE:include>
+)
+
+include(GNUInstallDirs)
+
+set(CONFIG_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
+set(GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+set(VERSION_CONFIG "${GENERATED_DIR}/${PROJECT_NAME}ConfigVersion.cmake")
+set(PROJECT_CONFIG "${GENERATED_DIR}/${PROJECT_NAME}Config.cmake")
+set(TARGETS_EXPORT_NAME "${PROJECT_NAME}Targets")
+set(NAMESPACE "${PROJECT_NAME}::")
+
+include(CMakePackageConfigHelpers)
+
+write_basic_package_version_file(
+    "${VERSION_CONFIG}" COMPATIBILITY SameMajorVersion
+)
+
+configure_package_config_file(
+    "cmake/Config.cmake.in"
+    "${PROJECT_CONFIG}"
+    INSTALL_DESTINATION "${CONFIG_INSTALL_DIR}"
+)
+
+install(
+    TARGETS ${PROJECT_NAME}
+    EXPORT "${TARGETS_EXPORT_NAME}"
+    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+)
+
+install(
+    FILES ${SOURCE_FILES}
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}"
+)
+
+install(
+    FILES "${PROJECT_CONFIG}" "${VERSION_CONFIG}"
+    DESTINATION "${CONFIG_INSTALL_DIR}"
+)
+
+install(
+    EXPORT "${TARGETS_EXPORT_NAME}"
+    NAMESPACE "${NAMESPACE}"
+    DESTINATION "${CONFIG_INSTALL_DIR}"
+)
