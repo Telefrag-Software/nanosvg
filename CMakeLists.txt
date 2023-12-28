@@ -1,75 +1,66 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 
-project(NanoSVG C)
+project(NanoSVG LANGUAGES C)
 
-# CMake needs *.c files to do something useful
-configure_file(src/nanosvg.h ${CMAKE_CURRENT_BINARY_DIR}/nanosvg.c)
-configure_file(src/nanosvgrast.h ${CMAKE_CURRENT_BINARY_DIR}/nanosvgrast.c)
+set(SOURCE_DIRECTORY "src")
 
-add_library(nanosvg ${CMAKE_CURRENT_BINARY_DIR}/nanosvg.c)
+set(SOURCE_FILES
+	"nanosvg.h"
+	"nanosvgrast.h"
+)
 
-find_library(MATH_LIBRARY m) # Business as usual
-if(MATH_LIBRARY)
-    target_link_libraries(nanosvg PUBLIC ${MATH_LIBRARY})
-endif()
+list(TRANSFORM SOURCE_FILES PREPEND "${SOURCE_DIRECTORY}/")
 
-target_include_directories(nanosvg PUBLIC $<INSTALL_INTERFACE:include/nanosvg>)
-target_compile_definitions(nanosvg PRIVATE NANOSVG_IMPLEMENTATION)
+add_library(${PROJECT_NAME} INTERFACE ${SOURCE_FILES})
 
-# Same for nanosvgrast
-add_library(nanosvgrast ${CMAKE_CURRENT_BINARY_DIR}/nanosvgrast.c)
-target_link_libraries(nanosvgrast PUBLIC nanosvg)
-target_include_directories(nanosvgrast PRIVATE src)
-target_compile_definitions(nanosvgrast PRIVATE NANOSVGRAST_IMPLEMENTATION)
+target_include_directories(${PROJECT_NAME}
+	INTERFACE
+		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/${SOURCE_DIRECTORY}>
+		$<INSTALL_INTERFACE:include>
+)
 
-# Installation and export:
+include(GNUInstallDirs)
+
+set(CONFIG_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
+set(GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+set(VERSION_CONFIG "${GENERATED_DIR}/${PROJECT_NAME}ConfigVersion.cmake")
+set(PROJECT_CONFIG "${GENERATED_DIR}/${PROJECT_NAME}Config.cmake")
+set(TARGETS_EXPORT_NAME "${PROJECT_NAME}Targets")
+set(NAMESPACE "${PROJECT_NAME}::")
 
 include(CMakePackageConfigHelpers)
 
 write_basic_package_version_file(
-    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
-    VERSION 1.0
-    COMPATIBILITY AnyNewerVersion
+	"${VERSION_CONFIG}" COMPATIBILITY SameMajorVersion
 )
 
-install(TARGETS nanosvg nanosvgrast
-        EXPORT ${PROJECT_NAME}Targets
-)
-
-export(EXPORT ${PROJECT_NAME}Targets 
-       FILE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Targets.cmake" 
-       NAMESPACE ${PROJECT_NAME}::
-)
-
-set(ConfigPackageLocation lib/cmake/${PROJECT_NAME})
-
-configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in
-  "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
-  INSTALL_DESTINATION ${ConfigPackageLocation}
-  NO_CHECK_REQUIRED_COMPONENTS_MACRO
+configure_package_config_file(
+	"cmake/Config.cmake.in"
+	"${PROJECT_CONFIG}"
+	INSTALL_DESTINATION "${CONFIG_INSTALL_DIR}"
 )
 
 install(
-    FILES
-      src/nanosvg.h
-      src/nanosvgrast.h
-    DESTINATION
-      include/nanosvg
-  )
-
-install(EXPORT ${PROJECT_NAME}Targets
-  FILE
-    ${PROJECT_NAME}Targets.cmake
-  NAMESPACE
-    ${PROJECT_NAME}::
-  DESTINATION
-    ${ConfigPackageLocation}
+	TARGETS ${PROJECT_NAME}
+	EXPORT "${TARGETS_EXPORT_NAME}"
+	LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+	ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+	RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+	INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
 )
 
 install(
-  FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
-  DESTINATION
-    ${ConfigPackageLocation}
+	FILES ${SOURCE_FILES}
+	DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}"
+)
+
+install(
+	FILES "${PROJECT_CONFIG}" "${VERSION_CONFIG}"
+	DESTINATION "${CONFIG_INSTALL_DIR}"
+)
+
+install(
+	EXPORT "${TARGETS_EXPORT_NAME}"
+	NAMESPACE "${NAMESPACE}"
+	DESTINATION "${CONFIG_INSTALL_DIR}"
 )
